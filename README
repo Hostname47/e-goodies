@@ -1,0 +1,693 @@
+# E-Goodies Project
+
+A full-stack application built with **React** (frontend) and **Symfony** (backend), fully containerized with Docker.
+
+---
+
+## 📋 Table of Contents
+
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Available Commands](#-available-commands)
+- [Development Workflow](#-development-workflow)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
+- [Setup Script Details](#-setup-script-details)
+- [Makefile Reference](#-makefile-reference)
+
+---
+
+## 📋 Prerequisites
+
+- Ubuntu/Debian Linux (or macOS)
+- Internet connection
+- Terminal access with sudo privileges
+
+**Note:** The setup script will automatically install:
+- Git
+- Node.js (via NVM)
+- npm
+- Docker & Docker Compose
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repository-url>
+cd <project-directory>
+```
+
+### 2. Run Setup
+
+```bash
+make setup
+```
+
+This command will:
+- ✅ Install all required dependencies (Git, Node.js, npm, Docker)
+- ✅ Build the React frontend
+- ✅ Set up the Symfony backend
+- ✅ Start all Docker containers
+
+**⚠️ Important:** After setup completes, **log out and log back in** (or restart your terminal) for Docker permissions to take effect.
+
+### 3. Start Development
+
+Open two terminal windows:
+
+**Terminal 1 - Backend:**
+```bash
+make dev-backend
+```
+
+**Terminal 2 - Frontend:**
+```bash
+make dev-frontend
+```
+
+### 4. Access Your Application
+
+- 🌐 **Frontend (Dev):** http://localhost:3000
+- 🔧 **Backend API:** http://localhost:8080
+- 🗄️ **PHPMyAdmin:** http://localhost:9002
+  - Username: `root`
+  - Password: `e47goodies@anam`
+
+---
+
+## 📚 Available Commands
+
+### Essential Commands
+
+```bash
+make help              # Show all available commands
+make setup             # Initial setup (first time only)
+make dev-frontend      # Start React dev server with hot reload
+make dev-backend       # Show backend logs
+make stop              # Stop all containers
+make status            # Check installation status
+```
+
+### Database Commands
+
+```bash
+make db-migrate        # Run database migrations
+make db-reset          # Reset database (fresh start)
+make shell-db          # Open MySQL shell
+```
+
+### Container Management
+
+```bash
+make logs              # View all backend logs
+make logs-php          # View PHP logs only
+make logs-api          # View API/Nginx logs only
+make ps                # Show running containers
+make restart           # Restart backend containers
+make clean             # Stop containers and remove volumes
+```
+
+### Development Tools
+
+```bash
+make shell-php         # Open PHP container shell
+make composer-install  # Install PHP dependencies
+make npm-install       # Install frontend dependencies
+make npm-build         # Build React for production
+```
+
+---
+
+## 🔧 Development Workflow
+
+### Daily Development
+
+```bash
+# Start your day
+make dev-backend    # Terminal 1: View backend logs
+make dev-frontend   # Terminal 2: Start React dev server
+
+# Make changes to your code
+# ✅ Frontend changes auto-reload at http://localhost:3000
+# ⚠️ Backend changes require container restart: make restart
+
+# End of day
+make stop
+```
+
+### Working with Database
+
+```bash
+# Run new migrations
+make db-migrate
+
+# Reset database (useful for testing)
+make db-reset
+
+# Access database directly
+make shell-db
+# Then enter password: e47goodies@anam
+```
+
+### Debugging Backend
+
+```bash
+# View logs
+make logs              # All logs
+make logs-php          # PHP/Symfony logs
+make logs-api          # Nginx logs
+
+# Access container shell
+make shell-php         # Debug inside PHP container
+
+# Restart services
+make restart           # Restart all backend containers
+```
+
+### Building for Production
+
+```bash
+# Build React app
+make npm-build
+
+# The built files will be in software/frontend/dist/
+```
+
+---
+
+## 📁 Project Structure
+
+```
+.
+├── software/
+│   ├── frontend/              # React application
+│   │   ├── src/               # React source code
+│   │   ├── public/            # Static assets
+│   │   ├── package.json       # Frontend dependencies
+│   │   ├── vite.config.js     # Vite configuration
+│   │   └── dist/              # Production build (after npm run build)
+│   │
+│   └── backend/
+│       └── symfony-api/       # Symfony API
+│           ├── src/           # PHP source code
+│           ├── config/        # Symfony configuration
+│           ├── migrations/    # Database migrations
+│           ├── composer.json  # PHP dependencies
+│           ├── .env.dev       # Environment template
+│           ├── .env.dev.local # Your local environment
+│           └── docker-compose.yml
+│
+├── infra/                     # Docker infrastructure
+│   ├── nginx/                 # Nginx configuration
+│   ├── php/                   # PHP-FPM configuration
+│   └── ...
+│
+├── setup.sh                   # Automated setup script
+├── Makefile                   # Command shortcuts
+└── README.md                  # This file
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### 1. Docker Permission Denied
+
+**Problem:**
+```
+permission denied while trying to connect to the Docker daemon socket
+```
+
+**Solution:**
+```bash
+# Log out and log back in (recommended)
+# OR restart your terminal
+# OR run manually:
+newgrp docker
+
+# Verify Docker works:
+docker ps
+```
+
+---
+
+### 2. Port Already in Use
+
+**Problem:**
+```
+Error: port is already allocated
+```
+
+**Solution:**
+```bash
+# Stop all containers
+make stop
+
+# Check what's using the ports
+sudo lsof -i :8080   # Backend API
+sudo lsof -i :3000   # Frontend dev server
+sudo lsof -i :80     # Production frontend
+sudo lsof -i :9002   # PHPMyAdmin
+
+# Kill the process if needed
+sudo kill -9 <PID>
+```
+
+---
+
+### 3. Frontend Not Updating
+
+**Problem:** Changes not reflecting in browser
+
+**Solution:**
+- ✅ Make sure you're running `make dev-frontend`
+- ✅ Access http://localhost:3000 (not port 80)
+- ✅ Check browser console for errors
+- ✅ Hard refresh: `Ctrl+Shift+R` (Linux/Windows) or `Cmd+Shift+R` (Mac)
+
+```bash
+# If still not working, restart:
+# Stop the dev server (Ctrl+C)
+make npm-install
+make dev-frontend
+```
+
+---
+
+### 4. Backend Changes Not Applying
+
+**Problem:** Symfony code changes not visible
+
+**Solution:**
+```bash
+# Clear cache and restart
+make restart
+
+# If still not working:
+make stop
+cd software/backend/symfony-api
+docker compose -p e-goodies-api up -d
+make dev-backend
+```
+
+---
+
+### 5. Database Connection Issues
+
+**Problem:** Can't connect to database or migrations fail
+
+**Solution:**
+```bash
+# Check if containers are running
+make ps
+
+# Check logs for errors
+make logs
+
+# Restart containers
+make restart
+
+# If database is corrupted, reset it:
+make db-reset
+```
+
+---
+
+### 6. Composer Dependencies Issues
+
+**Problem:** Missing PHP packages or autoload errors
+
+**Solution:**
+```bash
+# Reinstall Composer dependencies
+make composer-install
+
+# Or update them
+make composer-update
+```
+
+---
+
+### 7. npm Dependencies Issues
+
+**Problem:** Frontend build fails or modules missing
+
+**Solution:**
+```bash
+# Reinstall npm dependencies
+cd software/frontend
+rm -rf node_modules package-lock.json
+npm install
+
+# Or use make command
+make npm-install
+```
+
+---
+
+### 8. Container Won't Start
+
+**Problem:** Docker containers fail to start
+
+**Solution:**
+```bash
+# Check logs for specific errors
+make logs
+
+# Clean everything and start fresh
+make clean
+make setup
+
+# Check Docker service status
+sudo systemctl status docker
+
+# Restart Docker service if needed
+sudo systemctl restart docker
+```
+
+---
+
+### 9. "Setup script failed" Error
+
+**Problem:** Setup script exits with error
+
+**Solution:**
+```bash
+# Run setup script with verbose output
+chmod +x setup.sh
+bash -x ./setup.sh
+
+# Or run steps manually:
+# 1. Install dependencies
+sudo apt update
+sudo apt install -y git
+
+# 2. Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+
+# 3. Install Node.js
+nvm install --lts
+
+# 4. Continue with make setup
+make setup
+```
+
+---
+
+## 🔄 Clean Restart
+
+If something goes really wrong, try a complete clean restart:
+
+```bash
+# Stop everything
+make stop
+
+# Remove all Docker volumes (⚠️ deletes database data)
+make clean
+
+# Fresh setup
+make setup
+
+# Log out and log back in
+exit
+# (log back in)
+
+# Start development
+make dev-backend
+make dev-frontend
+```
+
+---
+
+## 📝 Setup Script Details
+
+The `setup.sh` script performs the following steps:
+
+### Step 1: Install Git
+- Checks if Git is installed
+- Installs via apt if missing
+- Verifies installation
+
+### Step 2: Install NVM and Node.js
+- Downloads and installs NVM (Node Version Manager)
+- Installs latest LTS version of Node.js
+- Verifies npm is available
+
+### Step 3: Setup Docker
+- Installs Docker Engine if not present
+- Configures Docker permissions for current user
+- Adds user to docker group
+- Restarts Docker service
+
+### Step 4: Build React Frontend
+- Navigates to `software/frontend`
+- Runs `npm install` to install dependencies
+- Runs `npm run build` to create production build
+- Creates `dist/` directory with optimized files
+
+### Step 5: Setup Symfony Backend
+- Navigates to `software/backend/symfony-api`
+- Starts Docker containers with `docker compose up -d`
+- Installs Composer dependencies
+- Copies environment configuration
+- Runs database migrations (if available)
+
+### Step 6: Summary
+- Shows installed versions
+- Lists running containers
+- Displays access URLs
+
+---
+
+## 📋 Makefile Reference
+
+Complete list of all available Make commands:
+
+### Setup & Status
+- `make help` - Show this help menu
+- `make setup` - Run initial setup (chmod +x and execute setup.sh)
+- `make status` - Show versions of installed tools and container status
+
+### Development
+- `make dev-frontend` - Start React dev server (http://localhost:3000)
+- `make dev-backend` - Show backend container logs
+- `make npm-install` - Install frontend dependencies
+- `make npm-build` - Build React for production
+
+### Container Management
+- `make stop` - Stop all Docker containers
+- `make restart` - Restart backend containers
+- `make clean` - Stop containers and remove volumes (⚠️ deletes data)
+- `make ps` - List running containers
+
+### Logs
+- `make logs` - Show all backend logs (follow mode)
+- `make logs-php` - Show PHP/Symfony logs only
+- `make logs-api` - Show Nginx/API logs only
+
+### Database
+- `make db-migrate` - Run Doctrine migrations
+- `make db-reset` - Drop, create, and migrate database (⚠️ deletes data)
+- `make shell-db` - Open MySQL command line
+
+### Backend Tools
+- `make shell-php` - Open bash shell in PHP container
+- `make composer-install` - Install PHP dependencies
+- `make composer-update` - Update PHP dependencies
+
+---
+
+## 🔐 Default Credentials
+
+### Database (MySQL)
+- **Host:** localhost
+- **Port:** 33060
+- **Database:** egoodies
+- **Username:** root
+- **Password:** e47goodies@anam
+
+### PHPMyAdmin
+- **URL:** http://localhost:9002
+- **Username:** root
+- **Password:** e47goodies@anam
+
+---
+
+## 🎯 Common Use Cases
+
+### Starting a New Feature
+
+```bash
+# 1. Create a new git branch
+git checkout -b feature/my-new-feature
+
+# 2. Start backend
+make dev-backend
+
+# 3. Start frontend (in new terminal)
+make dev-frontend
+
+# 4. Make your changes
+# Frontend: Edit files in software/frontend/src/
+# Backend: Edit files in software/backend/symfony-api/src/
+
+# 5. If you added database changes
+make db-migrate
+
+# 6. Commit your changes
+git add .
+git commit -m "Add new feature"
+git push origin feature/my-new-feature
+```
+
+### Testing Database Changes
+
+```bash
+# 1. Make changes to your entities or create new migration
+make shell-php
+php bin/console make:migration
+exit
+
+# 2. Review the migration file
+# software/backend/symfony-api/migrations/VersionXXXXXXXXXXXX.php
+
+# 3. Run the migration
+make db-migrate
+
+# 4. If something goes wrong, reset
+make db-reset
+```
+
+### Debugging Backend Issues
+
+```bash
+# 1. Check logs for errors
+make logs-php
+
+# 2. Access container to run commands
+make shell-php
+
+# 3. Inside container, you can:
+php bin/console debug:router          # See all routes
+php bin/console debug:container       # See services
+php bin/console cache:clear           # Clear cache
+composer dump-autoload                # Regenerate autoloader
+
+# 4. Exit container
+exit
+```
+
+### Updating Dependencies
+
+```bash
+# Frontend dependencies
+cd software/frontend
+npm update
+npm audit fix
+
+# Backend dependencies
+make composer-update
+
+# Rebuild containers if needed
+make restart
+```
+
+---
+
+## 📖 Learning Resources
+
+### React
+- [React Documentation](https://react.dev/)
+- [Vite Documentation](https://vitejs.dev/)
+
+### Symfony
+- [Symfony Documentation](https://symfony.com/doc/current/index.html)
+- [Doctrine ORM](https://www.doctrine-project.org/projects/doctrine-orm/en/current/index.html)
+
+### Docker
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Test locally with `make dev-frontend` and `make dev-backend`
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+---
+
+## 📞 Getting Help
+
+### Command Help
+```bash
+make help          # See all available commands
+make status        # Check your setup
+```
+
+### Check Logs
+```bash
+make logs          # All backend logs
+make logs-php      # PHP/Symfony specific
+make logs-api      # Nginx specific
+```
+
+### Common Commands
+```bash
+make ps            # What's running?
+make restart       # Turn it off and on again
+make clean         # Nuclear option (deletes everything)
+make setup         # Start from scratch
+```
+
+---
+
+## ⚠️ Important Notes
+
+- **Frontend Development:** React runs natively on your machine (not in Docker) for better performance and hot reload
+- **Backend Development:** Symfony runs in Docker containers for consistency and easy database access
+- **Production Build:** The production Docker setup serves the built React app via Nginx
+- **Environment Files:** Never commit `.env.dev.local` - it contains local configuration
+- **Database Data:** Use `make clean` carefully as it deletes all database data
+- **Docker Permissions:** You must log out/in after initial setup for Docker group membership to take effect
+
+---
+
+## 🚀 Quick Reference Card
+
+**First Time Setup:**
+```bash
+git clone <repo> && cd <project>
+make setup
+# Log out and back in
+make dev-backend    # Terminal 1
+make dev-frontend   # Terminal 2
+```
+
+**Daily Workflow:**
+```bash
+make dev-backend && make dev-frontend
+# Code...
+make stop
+```
+
+**Common Issues:**
+```bash
+make logs       # Check what's wrong
+make restart    # Try restarting
+make clean      # Nuclear option
+make setup      # Fresh start
+```
+
+---
+
+**Happy Coding! 🎉**
