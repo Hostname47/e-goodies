@@ -71,16 +71,24 @@ services:
       - mysql_user:/var/lib/mysql:delegated
     networks:
       - internal_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pegoodies"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   phpmyadmin:
     container_name: egoodies-phpmyadmin
     image: phpmyadmin/phpmyadmin:5
     environment:
       PMA_HOST: database
+      PMA_USER: root
+      PMA_PASSWORD: egoodies
     ports:
       - "9002:80"
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - internal_network
     volumes:
