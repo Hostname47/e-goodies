@@ -1,6 +1,7 @@
 services:
   # Frontend - React with Nginx
   frontend:
+    container_name: egoodies-frontend
     build:
       context: ./infra/nginx
       dockerfile: Dockerfile
@@ -23,6 +24,7 @@ services:
 
   # API - Nginx for Symfony
   api:
+    container_name: egoodies-webserver
     image: nginx:alpine
     restart: always
     ports:
@@ -38,6 +40,7 @@ services:
 
   # PHP-FPM (Symfony)
   php:
+    container_name: egoodies-php
     build:
       context: ./infra/
       dockerfile: ./php/Dockerfile
@@ -55,6 +58,7 @@ services:
       - "9003"
 
   database:
+    container_name: egoodies-database
     image: mysql
     platform: linux/x86_64
     command: --innodb-use-native-aio=${INNODB_USE_NATIVE_AIO:-1} --sql_mode=${SQL_MODE:-"ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"}
@@ -69,6 +73,7 @@ services:
       - internal_network
 
   phpmyadmin:
+    container_name: egoodies-phpmyadmin
     image: phpmyadmin/phpmyadmin:5
     environment:
       PMA_HOST: database

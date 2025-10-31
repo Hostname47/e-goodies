@@ -40,117 +40,94 @@ echo "=========================================="
 echo ""
 
 # ============================================
-# 1. Install Git
+# 0. Pre-check: Required dependencies
 # ============================================
-print_info "Step 1: Installing Git..."
+print_info "Checking required tools..."
 
-if command_exists git; then
-    print_success "Git is already installed ($(git --version))"
-else
-    sudo apt update
-    sudo apt install -y git
-    if command_exists git; then
-        print_success "Git installed successfully ($(git --version))"
+MISSING=()
+
+for cmd in git node npm docker; do
+    if command_exists "$cmd"; then
+        print_success "$cmd is installed: $($cmd --version | head -n 1)"
     else
-        print_error "Git installation failed"
-        exit 1
+        print_error "$cmd is not installed!"
+        MISSING+=("$cmd")
     fi
-fi
+done
 
-echo ""
+if [ ${#MISSING[@]} -ne 0 ]; then
+    echo ""
+    print_error "Missing dependencies: ${MISSING[*]}"
+    echo "Please install them before running this script."
+    echo ""
+    exit 1
+fi
 
 # ============================================
-# 2. Install NVM and Node.js
+# 0.1 Ensure Docker socket permissions
 # ============================================
-print_info "Step 2: Installing NVM and Node.js..."
-
-# Check if NVM is already installed
-if [ -d "$HOME/.nvm" ]; then
-    print_success "NVM is already installed"
+if [ -S /var/run/docker.sock ]; then
+    SOCKET_PERM=$(stat -c "%a" /var/run/docker.sock)
+    if [ "$SOCKET_PERM" != "777" ]; then
+        print_warning "Docker socket permissions are $SOCKET_PERM, changing to 777..."
+        if [ "$EUID" -ne 0 ]; then
+            sudo chmod 777 /var/run/docker.sock || {
+                print_error "Failed to change Docker socket permissions. Please run script with sudo."
+                exit 1
+            }
+        else
+            chmod 777 /var/run/docker.sock
+        fi
+        print_success "Docker socket permissions set to 777"
+    else
+        print_success "Docker socket permissions already set to 777"
+    fi
 else
-    print_warning "Installing NVM..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    print_success "NVM installed"
-fi
-
-# Load NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-# Install and use latest LTS Node.js
-if command_exists node; then
-    print_success "Node.js is already installed ($(node --version))"
-else
-    print_warning "Installing Node.js LTS..."
-    nvm install --lts
-    nvm use --lts
-    nvm alias default 'lts/*'
-    print_success "Node.js installed ($(node --version))"
-fi
-
-# Verify npm
-if command_exists npm; then
-    print_success "npm is available ($(npm --version))"
-else
-    print_error "npm not found"
+    print_error "Docker socket not found at /var/run/docker.sock"
+    echo "Make sure Docker service is running before continuing."
     exit 1
 fi
 
 echo ""
+print_success "All required tools and permissions are set."
+echo ""
 
 # ============================================
-# 3. Install Docker
+# 0.2 Ensure correct ownership for frontend
 # ============================================
-print_info "Step 3: Setting up Docker..."
+if [ -d "software/frontend" ]; then
+    print_info "Checking ownership of software/frontend..."
+    OWNER=$(stat -c "%U" software/frontend)
+    if [ "$OWNER" != "$USER" ]; then
+        print_warning "Frontend directory is owned by $OWNER, changing ownership to $USER..."
+        if [ "$EUID" -ne 0 ]; then
+            sudo chown -R "$USER":"$USER" software/frontend || {
+                print_error "Failed to change ownership of software/frontend. Please run script with sudo."
+                exit 1
+            }
+        else
+            chown -R "$USER":"$USER" software/frontend
+        fi
+        print_success "Ownership of software/frontend set to $USER"
+    else
+        print_success "Ownership of software/frontend already set to $USER"
+    fi
 
-if command_exists docker; then
-    print_success "Docker is already installed ($(docker --version))"
+    # Fix common npm permission issues
+    print_info "Adjusting permissions for npm operations..."
+    chmod -R 755 software/frontend
+    print_success "Permissions adjusted for software/frontend"
+
 else
-    print_warning "Installing Docker..."
-    
-    # Remove old versions
-    sudo apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
-    
-    # Update package index
-    sudo apt-get update
-    
-    # Install dependencies
-    sudo apt-get install -y \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release
-    
-    # Add Docker's official GPG key
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
-    
-    # Set up repository
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    # Install Docker Engine
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    
-    print_success "Docker installed successfully"
+    print_warning "Frontend directory not found: software/frontend"
 fi
-
-# Configure Docker permissions
-print_info "Configuring Docker permissions..."
-sudo usermod -aG docker $USER
-sudo chmod 666 /var/run/docker.sock
-sudo systemctl restart docker
-print_success "Docker configured"
 
 echo ""
 
 # ============================================
-# 4. Build React Frontend
+# 1. Build React frontend
 # ============================================
-print_info "Step 4: Building React frontend..."
+print_info "Step 1: Building React frontend..."
 
 if [ ! -d "software/frontend" ]; then
     print_error "Frontend directory not found: software/frontend"
@@ -190,16 +167,14 @@ if [ ! -d "software/backend/symfony-api" ]; then
     exit 1
 fi
 
-cd software/backend/symfony-api
-
-# Check if docker-compose.yml exists
-if [ ! -f "docker-compose.yml" ]; then
-    print_error "docker-compose.yml not found in software/backend/symfony-api"
+# Check if compose.yaml exists
+if [ ! -f "compose.yaml" ]; then
+    print_error "compose.yml not found"
     exit 1
 fi
 
 print_info "Starting Docker containers..."
-docker compose -p e-goodies-api up -d
+docker compose up -d
 
 print_info "Waiting for containers to be ready..."
 sleep 5
@@ -220,12 +195,6 @@ else
     print_warning ".env.dev not found, skipping environment setup"
 fi
 
-# Run database migrations (if applicable)
-if docker compose exec php php bin/console list | grep -q "doctrine:migrations:migrate"; then
-    print_info "Running database migrations..."
-    docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction || print_warning "Migrations failed or not needed"
-fi
-
 cd ../../..
 
 echo ""
@@ -243,12 +212,12 @@ print_success "npm: $(npm --version)"
 print_success "Docker: $(docker --version)"
 echo ""
 print_info "Services Status:"
-docker compose -p e-goodies-api ps
+docker compose ps
 echo ""
 print_info "Access your application:"
-echo "  📱 Frontend: Run 'cd software/frontend && npm run dev'"
-echo "  🔧 Backend API: http://localhost:8080"
-echo "  🗄️  PHPMyAdmin: http://localhost:9002"
+echo "  ✅ 📱 Frontend: Run 'cd software/frontend && npm run dev'"
+echo "  ✅ 🔧 Backend API: http://localhost:8080"
+echo "  ✅ 🗄️  PHPMyAdmin: http://localhost:9002"
 echo ""
 print_warning "Important: Please log out and back in (or restart terminal) for Docker group changes to take effect"
 echo "=========================================="
